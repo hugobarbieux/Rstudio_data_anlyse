@@ -1,0 +1,151 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Install packages.
+
+```{r}
+install.packages("readxl")
+library(readxl)
+```
+
+
+Import our data, grabbing sheet 3.
+
+```{r}
+testdata <- read_xlsx("Staff raw data.xlsx", sheet = 3)
+```
+
+
+show the first six lines of data
+```{r}
+head(testdata)
+```
+
+store the location of a file
+import the xlsx file, grab sheet 3; skip first six lines
+show the first 6 lines of the new data frame
+create a new object containing columns 1 2 3 5 41 and 1 again
+create a new column in that object called check, this containes the results of asking if the cells in column 1 are the same as the cells in column 6
+finally, show the cells in the column called class in the dataframe firstfivecolumns
+
+```{r}
+outturnfile <- "Revenue Outturn (RO3) 2017-18 data_by_LA.xlsx"
+outturndata <- read_xlsx(outturnfile, sheet=3, skip=6)
+head(outturndata)
+firstfivecolumns <- outturndata[c(1,2,3,5,41,1)]
+firstfivecolumns$check <- firstfivecolumns[1]==firstfivecolumns[6]
+firstfivecolumns$Class
+```
+
+Before all, the package and the library to read xlsx files seems to need reloading sometimes. Same when I want to create another project, I got an error message saying it can't find the readxl package.
+
+import xlsx file with expenditures and local athority
+
+```{r}
+healthexpenditure <- read_xlsx("Expenditure social care 17_18.xlsx", sheet = 3, skip = 6)
+```
+
+I need only the lines London Boroughs, Metropolitan districts and Unitary Authorities (L, MD, UA) in column class (need function...)
+I have selected them in a new xlsx file and delete the others because I could'nt find a function to create a new variable with selected rows.
+Let's import this new dataset
+
+```{r}
+expenditurestored <- read_xlsx("Expenditure social care 17_18 stored.xlsx", sheet = 3, skip = 6)
+```
+
+Now I want to compare rows in testdata and in expenditurestored to keep only the local authorities I previously selected.
+
+```{r}
+testdata$check <- expenditurestored[3]==testdata[1]
+```
+
+Well.. let's try something else and match column 3 of expenditurestored with column 1 of testdata
+I will merge the two datastets but they have to have a column in common. In Staff raw data, I change CSSR by "Local authority" and I reimport it as staffdata
+
+```{r}
+staffdata <- read_xlsx("Staff raw data.xlsx", sheet = 3)
+```
+
+Let's merge...
+
+```{r}
+combineddata <- merge(staffdata,expenditurestored)
+```
+
+It partially worked. The Local Athorities with the exact same spelling have been merged properly preserving the data but in expenditurestored, some local authorities have an additionnal UA which confuses R. There is probably a function to solve this but as only 56 rows must be changed, I'll changed them manually (using the LEFT function in Excel) and I will import an update of expenditurestored (called expenditurecleaned), then merge again.
+
+```{r}
+expenditurecleaned <- read_xlsx("Expenditure social care.xlsx", sheet = 3, skip = 6)
+```
+
+```{r}
+combineddata <- merge(staffdata,expenditurecleaned)
+```
+
+Some names might be still missing or might have been misspelled (5 actually), but as I don't have a code for local authorities, I have no better option so far. Let's say it's an editoriual choice...
+Now save this new variable as a csv
+
+```{r}
+write.csv(combineddata, file = "combineddata.csv")
+```
+
+Now I want to isolate only the total of expenditures for adult social care in expenditurecleaned. So I need to create another variable with only a few colums. (From GM to GS in the xlsx file)
+
+```{r}
+adultcareexpenditure <- expenditurecleaned[c(1,2,3,4,5,195,196,197,198,199,200,201)]
+```
+
+Create a new table with those data and the staff data
+
+```{r}
+expenditureandstaff <- merge(staffdata, adultcareexpenditure)
+```
+
+Export the new variable as a csv
+
+```{r}
+write.csv(expenditureandstaff, file = "expenditureandstaff.csv")
+```
+
+Import the revenue outturn for the financial year 2016-17
+
+```{r}
+outturnfile1617 <- "Revenue Outturn (RO3) 2016-17_data_by_LA.xlsx"
+```
+
+```{r}
+outturndata1617 <- read_xlsx(outturnfile1617, sheet = 3, skip = 6)
+```
+
+To compare the expenditure of Birmingham on "social care activities" and "information and early intervention" over the financial years 16-17 and 17-18, I need to
+1) create two new variables based on the revenue outturn with only le line Birmingham and the columns FX and GE for each dataset
+2) merge the variables and export as csv
+
+
+How to use subset: select the variable I work in, and then the criteria
+```{r}
+bham1617 <- subset(outturndata1617,outturndata1617$`Local authority` == "Birmingham")
+```
+
+```{r}
+bham1718 <- subset(outturndata, outturndata$`Local authority` == "Birmingham")
+```
+
+```{r}
+bham1617cleaned <- bham1617[c(180,187)]
+```
+
+```{r}
+bham1718cleaned <- bham1718[c(180,187)]
+```
+
+```{r}
+healthcombined <- rbind(bham1617cleaned, bham1718cleaned)
+```
+
+```{r}
+write.csv(healthcombined, file = "healthcombined.csv")
+```
+
